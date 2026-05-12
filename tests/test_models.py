@@ -245,49 +245,6 @@ class TestCMSSeriesCounter:
             assert result == 42
 
 
-# ---- CMSUpload.delete_with_relationships ---------------------------------
-
-class TestDeleteWithRelationships:
-    """Tests for CMSUpload.delete_with_relationships()."""
-
-    def _make_upload_with_mock_key(self):
-        """Create a mock that has delete_with_relationships bound properly."""
-        upload = mock.MagicMock(spec=CMSUpload)
-        upload.key = mock.MagicMock()
-        # Bind the real method to the mock instance
-        upload.delete_with_relationships = lambda: CMSUpload.delete_with_relationships(upload)
-        return upload
-
-    def test_delete_cascades_relationships(self):
-        """Deleting an upload also deletes all descendant relationships."""
-        upload = self._make_upload_with_mock_key()
-        mock_rel_keys = [mock.MagicMock(), mock.MagicMock()]
-
-        with mock.patch("models.graph_models.CMSRelationship.query") as MockQuery, \
-             mock.patch("models.cms_models.ndb.delete_multi") as mock_delete_multi:
-            MockQuery.return_value.fetch.return_value = mock_rel_keys
-
-            upload.delete_with_relationships()
-
-            MockQuery.assert_called_once_with(ancestor=upload.key)
-            MockQuery.return_value.fetch.assert_called_once_with(keys_only=True)
-            mock_delete_multi.assert_called_once_with(mock_rel_keys)
-            upload.key.delete.assert_called_once()
-
-    def test_delete_no_relationships(self):
-        """Deleting an upload with no relationships still deletes the upload."""
-        upload = self._make_upload_with_mock_key()
-
-        with mock.patch("models.graph_models.CMSRelationship.query") as MockQuery, \
-             mock.patch("models.cms_models.ndb.delete_multi") as mock_delete_multi:
-            MockQuery.return_value.fetch.return_value = []
-
-            upload.delete_with_relationships()
-
-            mock_delete_multi.assert_not_called()
-            upload.key.delete.assert_called_once()
-
-
 # ---- CMSConfig.is_admin --------------------------------------------------
 
 class TestCMSConfigIsAdmin:

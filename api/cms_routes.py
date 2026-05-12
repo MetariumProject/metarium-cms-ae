@@ -1,9 +1,8 @@
 import base64
 import logging
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, jsonify, request
 
-from models.acl_models import CMSConfig
 from models.cms_models import CMSConflictError, CMSUpload, CMSValidationError
 
 logger = logging.getLogger(__name__)
@@ -172,26 +171,4 @@ def list_uploads(series):
     })
 
 
-@cms_bp.route('/<series>/delete/<int:upload_id>', methods=['DELETE'])
-def delete_upload(series, upload_id):
-    """Delete an upload (admin only)."""
-    try:
-        CMSUpload.validate_series(series)
-    except CMSValidationError as e:
-        return jsonify({"error": str(e), "field": e.field}), 400
 
-    # Admin-only check
-    if not CMSConfig.is_admin(g.current_user.address):
-        return jsonify({"error": "Admin access required"}), 403
-
-    upload = CMSUpload.get_by_upload_id(series, upload_id)
-    if upload is None:
-        return jsonify({"error": f"Upload {upload_id} not found in series '{series}'"}), 404
-
-    upload.delete_with_relationships()
-
-    return jsonify({
-        "message": "Upload deleted",
-        "upload_id": upload_id,
-        "series": series,
-    })

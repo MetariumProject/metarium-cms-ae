@@ -250,33 +250,4 @@ class TestList:
             assert resp.status_code == 400
 
 
-# ---------------------------------------------------------------------------
-# Delete tests
-# ---------------------------------------------------------------------------
 
-class TestDelete:
-
-    def test_delete_as_admin(self, client, mock_admin_user, admin_headers):
-        """Admin can delete => 200, cascade-deletes relationships."""
-        upload = _mock_upload()
-        with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True), \
-             mock.patch("api.cms_routes.CMSConfig.is_admin", return_value=True), \
-             mock.patch("api.cms_routes.CMSUpload.get_by_upload_id", return_value=upload):
-            resp = client.delete("/api/cms/test-series/delete/1", headers=admin_headers)
-            assert resp.status_code == 200
-            upload.delete_with_relationships.assert_called_once()
-
-    def test_delete_as_scribe(self, client, mock_scribe_user, scribe_headers):
-        """Scribe cannot delete => 403."""
-        with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True), \
-             mock.patch("api.cms_routes.CMSConfig.is_admin", return_value=False):
-            resp = client.delete("/api/cms/test-series/delete/1", headers=scribe_headers)
-            assert resp.status_code == 403
-
-    def test_delete_not_found(self, client, mock_admin_user, admin_headers):
-        """Delete non-existent upload => 404."""
-        with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True), \
-             mock.patch("api.cms_routes.CMSConfig.is_admin", return_value=True), \
-             mock.patch("api.cms_routes.CMSUpload.get_by_upload_id", return_value=None):
-            resp = client.delete("/api/cms/test-series/delete/999", headers=admin_headers)
-            assert resp.status_code == 404

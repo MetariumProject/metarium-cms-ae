@@ -242,17 +242,4 @@ class CMSUpload(ndb.Model):
 
         return result
 
-    def delete_with_relationships(self):
-        """Delete this upload and cascade-delete all descendant relationships.
 
-        This prevents orphaned CMSRelationship entities from being
-        inherited by a future upload that might (in theory) receive the
-        same entity key.
-        """
-        from models.graph_models import CMSRelationship
-
-        # Fetch all relationship keys under this upload (active + removed)
-        rel_keys = CMSRelationship.query(ancestor=self.key).fetch(keys_only=True)
-        if rel_keys:
-            ndb.delete_multi(rel_keys)
-        self.key.delete()
