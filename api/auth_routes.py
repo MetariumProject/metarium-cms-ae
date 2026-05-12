@@ -144,6 +144,19 @@ def refresh():
     })
 
 
+@auth_bp.route('/session', methods=['GET'])
+def session():
+    """Return current session info. Accessible to any authenticated user (admin or scribe)."""
+    user = g.current_user
+    if CMSConfig.is_admin(user.address):
+        role = "admin"
+    elif Scribe.is_scribe(user.address):
+        role = "scribe"
+    else:
+        role = "unknown"
+    return jsonify({"address": user.address, "role": role})
+
+
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Invalidate the current user's tokens."""

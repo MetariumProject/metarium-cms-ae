@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metarium CMS — Browse</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            line-height: 1.7;
+            padding: 0;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+        header {
+            text-align: center;
+            padding: 3rem 1rem 2rem;
+            border-bottom: 2px solid #16213e;
+            margin-bottom: 2rem;
+        }
+        header h1 { font-size: 2.4rem; color: #ffffff; letter-spacing: 0.02em; }
+        header p { color: #a0a0c0; font-size: 1.1rem; margin-top: 0.5rem; }
+        a { color: #7ec8e3; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        nav { margin-bottom: 2rem; }
+        nav ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; justify-content: center; }
+        nav li { margin: 0; }
+        h2 {
+            color: #7ec8e3;
+            font-size: 1.6rem;
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #16213e;
+        }
+        h3 { color: #a0d2db; font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
+        h4 { color: #c0c0d0; font-size: 1rem; margin: 1rem 0 0.4rem; }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 10px 24px;
+            background: #7ec8e3;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+        }
+        .btn:hover { background: #6ab8d3; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary {
+            background: transparent;
+            color: #7ec8e3;
+            border: 1px solid #7ec8e3;
+        }
+        .btn-secondary:hover { background: rgba(126, 200, 227, 0.1); }
+        .btn-danger {
+            background: #e74c3c;
+            color: #fff;
+        }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 0.82rem;
+        }
+
+        /* Account selector */
+        .account-selector {
+            width: 100%;
+            padding: 10px 12px;
+            background: #16213e;
+            color: #e0e0e0;
+            border: 1px solid #1a3a5c;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+        .account-selector:focus { outline: none; border-color: #7ec8e3; }
+
+        /* Status bar */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #16213e;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .status-bar .address { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.9rem; }
+        .role-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .role-admin { background: #28a745; color: #fff; }
+        .role-scribe { background: #007bff; color: #fff; }
+        .status-bar .spacer { flex: 1; }
+
+        /* Series input */
+        .series-input {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .series-input input {
+            flex: 1;
+            padding: 10px 14px;
+            background: #16213e;
+            color: #e0e0e0;
+            border: 1px solid #1a3a5c;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        .series-input input:focus { outline: none; border-color: #7ec8e3; }
+        .series-input input::placeholder { color: #606080; }
+
+        /* Upload table */
+        .upload-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.75rem 0 1rem;
+            font-size: 0.9rem;
+        }
+        .upload-table th {
+            position: sticky;
+            top: 0;
+            background: #0f3460;
+            color: #7ec8e3;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 2px solid #1a3a5c;
+        }
+        .upload-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #2a2a4a;
+            background: #16213e;
+        }
+        .upload-table tr:hover td {
+            background: #1e3a5f;
+            cursor: pointer;
+        }
+        .upload-table tr:nth-child(even) td { background: #1a2a4a; }
+        .upload-table tr:nth-child(even):hover td { background: #1e3a5f; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+        .pagination span { color: #a0a0c0; font-size: 0.9rem; }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: #a0a0c0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #e0e0e0; }
+
+        /* Content display */
+        .content-pre {
+            background: #0f3460;
+            color: #e0e0e0;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            margin: 0.5rem 0 1rem;
+        }
+        .content-binary {
+            background: #0f3460;
+            color: #e0e0e0;
+            padding: 16px;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            word-break: break-all;
+            margin: 0.5rem 0 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .content-binary-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0.5rem 0;
+        }
+        .content-binary-header span { color: #a0d2db; font-weight: 600; }
+
+        /* Metadata grid */
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 6px 16px;
+            margin-bottom: 1.5rem;
+        }
+        .meta-label {
+            font-weight: 600;
+            color: #a0d2db;
+            white-space: nowrap;
+        }
+        .meta-value {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            color: #a0a0c0;
+            padding: 24px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Error */
+        .error-msg {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        /* No extension help */
+        .no-extension {
+            background: #1a2a4e;
+            border-left: 3px solid #7ec8e3;
+            padding: 16px 20px;
+            border-radius: 0 6px 6px 0;
+            margin: 1rem 0;
+        }
+        .no-extension p { margin-bottom: 0.5rem; }
+        .no-extension ul { padding-left: 1.5rem; margin-top: 0.5rem; }
+
+        /* Login card */
+        .login-card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 480px;
+            margin: 2rem auto;
+            text-align: center;
+        }
+        .login-card h2 { border-bottom: none; text-align: center; }
+        .login-card p { color: #a0a0c0; margin-bottom: 1.5rem; }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            margin-top: 3rem;
+            border-top: 1px solid #16213e;
+            color: #606080;
+            font-size: 0.9rem;
+        }
+
+        /* Upload section initially hidden */
+        #upload-section { margin-top: 1.5rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<header>
+    <h1>Metarium CMS</h1>
+    <p>Content Management System — Browse Library</p>
+</header>
+
+<nav>
+    <ul>
+        <li><a href="/docs">API Docs</a></li>
+        <li><a href="/browse">Browse Library</a></li>
+    </ul>
+</nav>
+
+<div id="app">
+    <!-- Login View -->
+    <div id="login-view">
+        <div class="login-card">
+            <h2>Connect Wallet</h2>
+            <p>Authenticate with your Polkadot.js browser extension to browse CMS content.</p>
+            <div id="login-error" class="error-msg" style="display:none"></div>
+            <div id="login-loading" class="loading" style="display:none">Loading...</div>
+            <div id="no-extension" class="no-extension" style="display:none">
+                <p><strong>Polkadot.js Extension Not Detected</strong></p>
+                <p>You need the Polkadot.js browser extension to authenticate. Install it from:</p>
+                <ul>
+                    <li><a href="https://chrome.google.com/webstore/detail/polkadot%7Bjs%7D-extension/mopnmbcafieddcagagdcbnhejhlodfdd" target="_blank" rel="noopener">Chrome Web Store</a></li>
+                    <li><a href="https://addons.mozilla.org/en-US/firefox/addon/polkadot-js-extension/" target="_blank" rel="noopener">Firefox Add-ons</a></li>
+                </ul>
+            </div>
+            <div id="account-selector-group" style="display:none">
+                <p style="color:#a0d2db;margin-bottom:8px;text-align:left">Select an account:</p>
+                <select id="account-select" class="account-selector"></select>
+            </div>
+            <button id="connect-btn" class="btn" style="margin-top:8px">Connect Wallet</button>
+            <button id="login-selected-btn" class="btn" style="display:none;margin-top:8px">Sign In with Selected Account</button>
+        </div>
+    </div>
+
+    <!-- Browse View -->
+    <div id="browse-view" style="display:none">
+        <div id="browse-error" class="error-msg" style="display:none"></div>
+        <div id="browse-loading" class="loading" style="display:none">Loading...</div>
+        <div class="status-bar">
+            <span>Connected:</span>
+            <span id="user-address" class="address"></span>
+            <span id="user-role" class="role-badge"></span>
+            <span class="spacer"></span>
+            <button id="logout-btn" class="btn btn-danger btn-sm">Logout</button>
+        </div>
+
+        <form id="series-form" class="series-input">
+            <input type="text" id="series-input" placeholder="Enter series name (e.g. my-series)" autocomplete="off">
+            <button type="submit" class="btn">Load Series</button>
+        </form>
+
+        <div id="upload-section" style="display:none">
+            <h3 id="series-title"></h3>
+            <table class="upload-table">
+                <thead>
+                    <tr>
+                        <th>Upload ID</th>
+                        <th>UUID</th>
+                        <th>Content Type</th>
+                        <th>Lookup Path</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody id="upload-table-body"></tbody>
+            </table>
+            <div class="pagination">
+                <button id="prev-btn" class="btn btn-secondary btn-sm" disabled>← Previous</button>
+                <span id="page-indicator">Page 1</span>
+                <button id="next-btn" class="btn btn-secondary btn-sm" disabled>Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Modal -->
+    <div id="content-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <button id="modal-close" class="modal-close">&times;</button>
+            <h3>Upload Detail</h3>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>Metarium CMS v1.0.0</p>
+</footer>
+
+</div>
+
+<!-- Polkadot.js UMD bundles -->
+<script src="https://unpkg.com/@polkadot/util@14.0.3/bundle-polkadot-util.js"
+        integrity="sha384-VqvFgkO/E6mXTxumDtVf6INKhwFfOH+1md0eGhXID+h/Il9BDJHk2rF7zJaKbEJa"
+        crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@polkadot/util-crypto@14.0.3/bundle-polkadot-util-crypto.js"
+        integrity="sha384-7+Zbf8RFroMun8ExBMXiymbq8cn5gfjfa9epqHP6X0Ex5yWA2DLrfJj4QaMJ04Qd"
+        crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@polkadot/extension-dapp@0.63.1/bundle-polkadot-extension-dapp.js"
+        integrity="sha384-9TA/hfk73deVktB7bbrbo2e6WRafAVlDKMCHZKOOJRo7enrCKqKP7aIc2sGZ6Rj5"
+        crossorigin="anonymous"></script>
+<script>
+(function() {
+    'use strict';
+
+    /* ===== A. State Management ===== */
+    const state = {
+        accessToken: sessionStorage.getItem('cms_access_token'),
+        refreshToken: localStorage.getItem('cms_refresh_token'),
+        address: localStorage.getItem('cms_address'),
+        role: localStorage.getItem('cms_role'),
+        currentSeries: null,
+        uploads: [],
+        nextCursor: null,
+        cursor: null,
+        prevCursors: [],
+        pageNum: 1,
+        pageSize: 10,
+    };
+
+    /* ===== B. Token Management ===== */
+    function saveTokens(data) {
+        state.accessToken = data.access_token;
+        state.refreshToken = data.refresh_token;
+        state.address = data.address;
+        state.role = data.role;
+        sessionStorage.setItem('cms_access_token', data.access_token);
+        localStorage.setItem('cms_refresh_token', data.refresh_token);
+        localStorage.setItem('cms_address', data.address);
+        localStorage.setItem('cms_role', data.role);
+    }
+
+    function clearTokens() {
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.address = null;
+        state.role = null;
+        sessionStorage.removeItem('cms_access_token');
+        localStorage.removeItem('cms_refresh_token');
+        localStorage.removeItem('cms_address');
+        localStorage.removeItem('cms_role');
+    }
+
+    async function apiFetch(url, options) {
+        options = options || {};
+        options.headers = options.headers || {};
+        if (state.accessToken) {
+            options.headers['Authorization'] = 'Bearer ' + state.accessToken;
+        }
+        if (!options.headers['Content-Type'] && options.body) {
+            options.headers['Content-Type'] = 'application/json';
+        }
+        var resp = await fetch(url, options);
+        if (resp.status === 401 && state.refreshToken) {
+            var refreshResp = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({refresh_token: state.refreshToken})
+            });
+            if (refreshResp.ok) {
+                var newTokens = await refreshResp.json();
+                saveTokens(newTokens);
+                options.headers['Authorization'] = 'Bearer ' + state.accessToken;
+                resp = await fetch(url, options);
+            } else {
+                clearTokens();
+                showLogin();
+                throw new Error('Session expired. Please log in again.');
+            }
+        }
+        return resp;
+    }
+
+    /* ===== C. Canonical JSON ===== */
+    function canonicalJsonStringify(obj) {
+        if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+            return JSON.stringify(obj);
+        }
+        var sortedKeys = Object.keys(obj).sort();
+        var parts = sortedKeys.map(function(k) {
+            return JSON.stringify(k) + ':' + canonicalJsonStringify(obj[k]);
+        });
+        return '{' + parts.join(',') + '}';
+    }
+
+    /* ===== D. Authentication Flow ===== */
+    async function connectWallet() {
+        hideError();
+        document.getElementById('no-extension').style.display = 'none';
+
+        if (typeof polkadotExtensionDapp === 'undefined') {
+            showError('Polkadot.js libraries failed to load. Please check your internet connection and try again.');
+            return;
+        }
+
+        var web3Enable = polkadotExtensionDapp.web3Enable;
+        var web3Accounts = polkadotExtensionDapp.web3Accounts;
+        var extensions;
+        try {
+            extensions = await web3Enable('Metarium CMS');
+        } catch (e) {
+            showError('Failed to connect to wallet extension: ' + e.message);
+            return;
+        }
+        if (extensions.length === 0) {
+            showNoExtensionHelp();
+            return;
+        }
+
+        var accounts = await web3Accounts();
+        if (accounts.length === 0) {
+            showError('No accounts found in the extension. Please create or import an account.');
+            return;
+        }
+
+        if (accounts.length === 1) {
+            await authenticateAccount(accounts[0]);
+        } else {
+            showAccountSelector(accounts);
+        }
+    }
+
+    function showAccountSelector(accounts) {
+        var selector = document.getElementById('account-select');
+        selector.innerHTML = '';
+        accounts.forEach(function(acc, i) {
+            var opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = (acc.meta.name || 'Account ' + (i + 1)) + ' \u2014 ' + acc.address.slice(0, 8) + '...' + acc.address.slice(-4);
+            selector.appendChild(opt);
+        });
+        document.getElementById('account-selector-group').style.display = 'block';
+        document.getElementById('login-selected-btn').style.display = 'inline-block';
+        window._pendingAccounts = accounts;
+    }
+
+    async function authenticateAccount(account) {
+        var address = account.address;
+        showLoading('Requesting challenge...');
+
+        var challengeResp;
+        try {
+            challengeResp = await fetch('/api/auth/challenge', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({address: address})
+            });
+        } catch (e) {
+            showError('Network error: ' + e.message);
+            hideLoading();
+            return;
+        }
+        if (!challengeResp.ok) {
+            var err = await challengeResp.json().catch(function() { return {}; });
+            showError(err.error || 'Challenge request failed (HTTP ' + challengeResp.status + ')');
+            hideLoading();
+            return;
+        }
+        var responseData = await challengeResp.json();
+        var challenge = responseData.challenge;
+
+        var canonicalJson = canonicalJsonStringify(challenge);
+
+        var encoder = new TextEncoder();
+        var bytes = encoder.encode(canonicalJson);
+        var hexMessage = '0x' + Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+
+        showLoading('Please sign the message in your wallet...');
+        var web3FromSource = polkadotExtensionDapp.web3FromSource;
+        var injector;
+        try {
+            injector = await web3FromSource(account.meta.source);
+        } catch (e) {
+            showError('Failed to get wallet signer: ' + e.message);
+            hideLoading();
+            return;
+        }
+        if (!injector || !injector.signer || !injector.signer.signRaw) {
+            showError('Wallet does not support message signing.');
+            hideLoading();
+            return;
+        }
+
+        var signResult;
+        try {
+            signResult = await injector.signer.signRaw({
+                address: account.address,
+                data: hexMessage,
+                type: 'bytes'
+            });
+        } catch (e) {
+            showError('Signing cancelled or failed: ' + e.message);
+            hideLoading();
+            return;
+        }
+
+        showLoading('Verifying signature...');
+        var msgHex = hexMessage.startsWith('0x') ? hexMessage.slice(2) : hexMessage;
+        var sigHex = signResult.signature.startsWith('0x') ? signResult.signature.slice(2) : signResult.signature;
+
+        var verifyResp;
+        try {
+            verifyResp = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    address: address,
+                    message: msgHex,
+                    signature: sigHex
+                })
+            });
+        } catch (e) {
+            showError('Network error: ' + e.message);
+            hideLoading();
+            return;
+        }
+
+        if (!verifyResp.ok) {
+            var verifyErr = await verifyResp.json().catch(function() { return {}; });
+            showError(verifyErr.error || 'Verification failed (HTTP ' + verifyResp.status + ')');
+            hideLoading();
+            return;
+        }
+
+        var tokenData = await verifyResp.json();
+        saveTokens(tokenData);
+        hideLoading();
+        showBrowse();
+    }
+
+    /* ===== E. Series Browser ===== */
+    async function loadSeries(series) {
+        state.currentSeries = series;
+        state.cursor = null;
+        state.prevCursors = [];
+        state.pageNum = 1;
+        document.getElementById('series-title').textContent = 'Series: ' + series;
+        document.getElementById('upload-section').style.display = 'block';
+        await loadPage();
+    }
+
+    async function loadPage() {
+        showLoading('Loading uploads...');
+        hideError();
+        var url = '/api/cms/' + encodeURIComponent(state.currentSeries) + '/list?limit=' + state.pageSize;
+        if (state.cursor) {
+            url += '&cursor=' + encodeURIComponent(state.cursor);
+        }
+        var resp;
+        try {
+            resp = await apiFetch(url);
+        } catch (e) {
+            showError(e.message);
+            hideLoading();
+            return false;
+        }
+        if (!resp.ok) {
+            var err = await resp.json().catch(function() { return {}; });
+            showError(err.error || 'Failed to load uploads (HTTP ' + resp.status + ')');
+            hideLoading();
+            return false;
+        }
+        var data = await resp.json();
+        state.uploads = data.uploads;
+        state.nextCursor = data.next_cursor;
+        renderUploadTable();
+        hideLoading();
+        return true;
+    }
+
+    async function nextPage() {
+        if (!state.nextCursor) return;
+        var savedCursor = state.cursor;
+        var savedPageNum = state.pageNum;
+        state.prevCursors.push(state.cursor);
+        state.cursor = state.nextCursor;
+        state.pageNum++;
+        var ok = await loadPage();
+        if (!ok) {
+            state.prevCursors.pop();
+            state.cursor = savedCursor;
+            state.pageNum = savedPageNum;
+        }
+    }
+
+    async function prevPage() {
+        if (state.prevCursors.length === 0) return;
+        var savedCursor = state.cursor;
+        var savedPageNum = state.pageNum;
+        var popped = state.prevCursors.pop();
+        state.cursor = popped;
+        state.pageNum--;
+        var ok = await loadPage();
+        if (!ok) {
+            state.prevCursors.push(popped);
+            state.cursor = savedCursor;
+            state.pageNum = savedPageNum;
+        }
+    }
+
+    /* ===== F. Upload Table Rendering ===== */
+    function renderUploadTable() {
+        var tbody = document.getElementById('upload-table-body');
+        tbody.innerHTML = '';
+        if (state.uploads.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#a0a0c0;padding:24px">No uploads found in this series</td></tr>';
+            updatePagination();
+            return;
+        }
+        state.uploads.forEach(function(u) {
+            var tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.onclick = function() { viewUpload(state.currentSeries, u.upload_id); };
+            tr.innerHTML =
+                '<td>' + escapeHtml(String(u.upload_id)) + '</td>' +
+                '<td title="' + escapeHtml(u.uuid) + '">' + escapeHtml(u.uuid.slice(0, 8)) + '...</td>' +
+                '<td>' + escapeHtml(u.content_type || '-') + '</td>' +
+                '<td>' + escapeHtml(u.lookup_path || '-') + '</td>' +
+                '<td>' + formatDate(u.created_at) + '</td>';
+            tbody.appendChild(tr);
+        });
+        updatePagination();
+    }
+
+    function updatePagination() {
+        document.getElementById('prev-btn').disabled = (state.prevCursors.length === 0);
+        document.getElementById('next-btn').disabled = !state.nextCursor;
+        document.getElementById('page-indicator').textContent = 'Page ' + state.pageNum;
+    }
+
+    /* ===== G. Content Viewer (Modal) ===== */
+    function isTextualContentType(ct) {
+        if (!ct) return false;
+        ct = ct.toLowerCase().split(';')[0].trim();
+        if (ct.startsWith('text/')) return true;
+        if (ct === 'application/json') return true;
+        if (ct === 'application/xml') return true;
+        if (ct === 'image/svg+xml') return true;
+        if (ct.endsWith('+json')) return true;
+        if (ct.endsWith('+xml')) return true;
+        return false;
+    }
+
+    async function viewUpload(series, uploadId) {
+        showModal();
+        showModalLoading('Loading content...');
+        var resp;
+        try {
+            resp = await apiFetch('/api/cms/' + encodeURIComponent(series) + '/download/' + uploadId);
+        } catch (e) {
+            showModalError(e.message);
+            return;
+        }
+        if (!resp.ok) {
+            var err = await resp.json().catch(function() { return {}; });
+            showModalError(err.error || 'Failed to load upload (HTTP ' + resp.status + ')');
+            return;
+        }
+        var payload = await resp.json();
+        var upload = payload.data;
+        renderUploadDetail(upload);
+    }
+
+    function renderUploadDetail(upload) {
+        var modalBody = document.getElementById('modal-body');
+        var html = '<div class="metadata-grid">';
+        var fields = [
+            ['Upload ID', upload.upload_id],
+            ['UUID', upload.uuid],
+            ['Series', upload.series],
+            ['Content Type', upload.content_type],
+            ['Lookup Path', upload.lookup_path || '-'],
+            ['Signature', upload.signature || '-'],
+            ['Created', formatDate(upload.created_at)],
+            ['Updated', formatDate(upload.updated_at)],
+        ];
+        fields.forEach(function(pair) {
+            var label = pair[0];
+            var value = pair[1];
+            html += '<div class="meta-label">' + escapeHtml(label) + '</div>';
+            html += '<div class="meta-value">' + escapeHtml(String(value != null ? value : '-')) + '</div>';
+        });
+        html += '</div>';
+
+        if (upload.extra_metadata && Object.keys(upload.extra_metadata).length > 0) {
+            html += '<h4>Extra Metadata</h4>';
+            html += '<pre class="content-pre">' + escapeHtml(JSON.stringify(upload.extra_metadata, null, 2)) + '</pre>';
+        }
+
+        html += '<h4>Content</h4>';
+        if (upload.content === null || upload.content === undefined) {
+            html += '<p style="color:#a0a0c0">No content</p>';
+        } else if (isTextualContentType(upload.content_type)) {
+            html += '<pre class="content-pre">' + escapeHtml(upload.content) + '</pre>';
+        } else {
+            html += '<div class="content-binary-header">';
+            html += '<span>Binary (Base64)</span>';
+            html += '<button class="btn btn-secondary btn-sm" onclick="copyBase64(event)">Copy</button>';
+            html += '<button class="btn btn-secondary btn-sm" onclick="downloadBinary()">Download</button>';
+            html += '</div>';
+            html += '<pre class="content-binary" id="base64-content">' + escapeHtml(upload.content) + '</pre>';
+            window._currentUploadContentType = upload.content_type || 'application/octet-stream';
+        }
+
+        modalBody.innerHTML = html;
+    }
+
+    /* ===== H. Utility Functions ===== */
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function formatDate(isoStr) {
+        if (!isoStr) return '-';
+        var d = new Date(isoStr);
+        return d.toLocaleString();
+    }
+
+    function showLogin() {
+        document.getElementById('login-view').style.display = 'block';
+        document.getElementById('browse-view').style.display = 'none';
+        document.getElementById('content-modal').style.display = 'none';
+        document.getElementById('account-selector-group').style.display = 'none';
+        document.getElementById('login-selected-btn').style.display = 'none';
+    }
+
+    function showBrowse() {
+        document.getElementById('login-view').style.display = 'none';
+        document.getElementById('browse-view').style.display = 'block';
+        document.getElementById('user-address').textContent = state.address.slice(0, 6) + '...' + state.address.slice(-4);
+        var roleBadge = document.getElementById('user-role');
+        roleBadge.textContent = state.role;
+        roleBadge.className = 'role-badge role-' + state.role;
+    }
+
+    function showModal() {
+        document.getElementById('content-modal').style.display = 'flex';
+    }
+
+    function hideModal() {
+        document.getElementById('content-modal').style.display = 'none';
+        document.getElementById('modal-body').innerHTML = '';
+    }
+
+    function showError(msg) {
+        var target = isBrowseVisible() ? 'browse-error' : 'login-error';
+        var el = document.getElementById(target);
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function hideError() {
+        document.getElementById('login-error').style.display = 'none';
+        document.getElementById('browse-error').style.display = 'none';
+    }
+
+    function showLoading(msg) {
+        var target = isBrowseVisible() ? 'browse-loading' : 'login-loading';
+        var el = document.getElementById(target);
+        el.textContent = msg || 'Loading...';
+        el.style.display = 'block';
+    }
+
+    function hideLoading() {
+        document.getElementById('login-loading').style.display = 'none';
+        document.getElementById('browse-loading').style.display = 'none';
+    }
+
+    function isBrowseVisible() {
+        return document.getElementById('browse-view').style.display !== 'none';
+    }
+
+    function showModalLoading(msg) {
+        document.getElementById('modal-body').innerHTML = '<div class="loading">' + escapeHtml(msg) + '</div>';
+    }
+
+    function showModalError(msg) {
+        document.getElementById('modal-body').innerHTML = '<div class="error-msg">' + escapeHtml(msg) + '</div>';
+    }
+
+    function showNoExtensionHelp() {
+        document.getElementById('no-extension').style.display = 'block';
+    }
+
+    /* Global functions for inline onclick handlers */
+    window.copyBase64 = function(event) {
+        var text = document.getElementById('base64-content').textContent;
+        var btn = event.target;
+        navigator.clipboard.writeText(text).then(function() {
+            var orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(function() { btn.textContent = orig; }, 1500);
+        });
+    };
+
+    window.downloadBinary = function() {
+        var base64 = document.getElementById('base64-content').textContent;
+        var byteChars = atob(base64);
+        var byteArray = new Uint8Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) {
+            byteArray[i] = byteChars.charCodeAt(i);
+        }
+        var blob = new Blob([byteArray], {type: window._currentUploadContentType || 'application/octet-stream'});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'download';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    /* ===== I. Initialization ===== */
+    document.addEventListener('DOMContentLoaded', function() {
+        if (state.accessToken && state.address) {
+            apiFetch('/api/auth/session')
+                .then(function(resp) {
+                    if (resp.ok) {
+                        return resp.json().then(function(data) {
+                            state.role = data.role;
+                            localStorage.setItem('cms_role', data.role);
+                            showBrowse();
+                        });
+                    }
+                    throw new Error('session invalid');
+                })
+                .catch(function() {
+                    clearTokens();
+                    showLogin();
+                });
+        } else if (state.refreshToken && state.address) {
+            fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({refresh_token: state.refreshToken})
+            }).then(function(r) {
+                if (r.ok) return r.json();
+                throw new Error('refresh failed');
+            }).then(function(tokens) {
+                saveTokens(tokens);
+                showBrowse();
+            }).catch(function() {
+                clearTokens();
+                showLogin();
+            });
+        } else {
+            showLogin();
+        }
+
+        /* Event listeners */
+        document.getElementById('connect-btn').addEventListener('click', connectWallet);
+        document.getElementById('login-selected-btn').addEventListener('click', function() {
+            var idx = document.getElementById('account-select').value;
+            if (window._pendingAccounts && window._pendingAccounts[idx]) {
+                authenticateAccount(window._pendingAccounts[idx]);
+            }
+        });
+        document.getElementById('logout-btn').addEventListener('click', async function() {
+            try { await apiFetch('/api/auth/logout', {method: 'POST'}); } catch(e) { /* ignore */ }
+            clearTokens();
+            showLogin();
+        });
+        document.getElementById('series-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            hideError();
+            var series = document.getElementById('series-input').value.trim().toLowerCase();
+            if (series) loadSeries(series);
+        });
+        document.getElementById('prev-btn').addEventListener('click', prevPage);
+        document.getElementById('next-btn').addEventListener('click', nextPage);
+        document.getElementById('modal-close').addEventListener('click', hideModal);
+        document.getElementById('content-modal').addEventListener('click', function(e) {
+            if (e.target === document.getElementById('content-modal')) hideModal();
+        });
+    });
+})();
+</script>
+</body>
+</html>

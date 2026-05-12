@@ -43,7 +43,7 @@ except Exception:
     )
 
 # Paths that skip authentication
-SKIP_AUTH_PREFIXES = ('/_ah/', '/api/auth/challenge', '/api/auth/verify', '/api/auth/refresh', '/docs')
+SKIP_AUTH_PREFIXES = ('/_ah/', '/api/auth/challenge', '/api/auth/verify', '/api/auth/refresh', '/docs', '/browse')
 
 
 @app.before_request
@@ -116,6 +116,12 @@ def index():
 @app.route('/docs')
 def docs():
     return render_template("docs.html")
+
+
+@app.route('/browse')
+def browse():
+    """Browser UI for authenticated users."""
+    return render_template("browse.html")
 
 
 @app.route('/_ah/health')

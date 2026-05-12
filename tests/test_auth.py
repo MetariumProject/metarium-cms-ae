@@ -195,6 +195,34 @@ class TestRefresh:
 
 
 # ---------------------------------------------------------------------------
+# GET /api/auth/session
+# ---------------------------------------------------------------------------
+
+class TestSession:
+
+    def test_session_admin(self, client, mock_admin_user, admin_headers):
+        """Admin user gets session info with role=admin."""
+        resp = client.get("/api/auth/session", headers=admin_headers)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["role"] == "admin"
+        assert data["address"] == mock_admin_user.address
+
+    def test_session_scribe(self, client, mock_scribe_user, scribe_headers):
+        """Scribe user gets session info with role=scribe."""
+        resp = client.get("/api/auth/session", headers=scribe_headers)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["role"] == "scribe"
+        assert data["address"] == mock_scribe_user.address
+
+    def test_session_no_auth(self, client):
+        """Unauthenticated request to /api/auth/session => 401."""
+        resp = client.get("/api/auth/session")
+        assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
 # POST /api/auth/logout
 # ---------------------------------------------------------------------------
 
