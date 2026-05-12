@@ -1,0 +1,9 @@
+.git
+.gitignore
+.gcloudignore
+.venv/
+__pycache__/
+tests/
+*.pyc
+setup_admin.py
+requirements-dev.txt

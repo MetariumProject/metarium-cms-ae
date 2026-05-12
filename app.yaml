@@ -1,0 +1,13 @@
+runtime: python311
+app_engine_apis: true
+instance_class: F1
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 0
+  max_instances: 5
+env_variables:
+  GOOGLE_CLOUD_PROJECT: "metarium-cms-test-11052026"
+handlers:
+- url: /.*
+  script: auto
+  secure: always

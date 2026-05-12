@@ -1,0 +1,8 @@
+Flask==2.3.3
+Flask-CORS==4.0.0
+google-cloud-ndb>=2.3.0
+appengine-python-standard>=1.0.0
+Werkzeug==2.3.7
+blake3==0.3.3
+substrate-interface==1.7.11
+setuptools<81
