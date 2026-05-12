@@ -157,7 +157,7 @@ def list_uploads(series):
         return jsonify({"error": "Invalid 'limit' parameter; must be an integer"}), 400
 
     if limit < 1:
-        limit = 1
+        return jsonify({"error": "Invalid 'limit' parameter; must be >= 1"}), 400
     elif limit > 200:
         limit = 200
 

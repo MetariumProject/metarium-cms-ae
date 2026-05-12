@@ -6,7 +6,7 @@ automatic_scaling:
   min_instances: 0
   max_instances: 5
 env_variables:
-  GOOGLE_CLOUD_PROJECT: "metarium-cms-ae"
+  GOOGLE_CLOUD_PROJECT: "metarium-cms-test-11052026"
 handlers:
 - url: /.*
   script: auto

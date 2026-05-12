@@ -10,15 +10,8 @@ indexes:
 - kind: CMSUpload
   ancestor: yes
   properties:
-  - name: lookup_path
-- kind: CMSUpload
-  ancestor: yes
-  properties:
   - name: upload_id
     direction: desc
-- kind: CMSUpload
-  properties:
-  - name: uuid
 - kind: CMSRelationship
   ancestor: yes
   properties:
