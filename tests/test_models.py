@@ -1,7 +1,12 @@
-"""Unit tests for model validators and graph predicates."""
+"""Unit tests for model validators, graph predicates, and model methods."""
+import base64
+from datetime import datetime
+from unittest import mock
+
 import pytest
 
 from models.cms_models import CMSUpload, CMSValidationError
+from models.acl_models import CMSConfig, Scribe
 from models.graph_models import ALL_PREDICATES, ALLOWED_PREDICATES, validate_predicate
 
 
@@ -94,3 +99,103 @@ class TestAllPredicates:
         for preds in ALLOWED_PREDICATES.values():
             expected.update(preds)
         assert ALL_PREDICATES == expected
+
+
+# ---- CMSUpload.to_dict ---------------------------------------------------
+
+class TestCMSUploadToDict:
+    """Tests for CMSUpload.to_dict() serialization."""
+
+    def test_to_dict_binary_content(self):
+        """Binary content should be base64-encoded in to_dict output."""
+        upload = CMSUpload()
+        upload.upload_id = 1
+        upload.uuid = "test-uuid-1234"
+        upload.series = "test-series"
+        upload.lookup_path = "2025/01/data.bin"
+        upload.content = b"\x00\x01\x02\xff"
+        upload.content_text = None
+        upload.content_type = "application/octet-stream"
+        upload.extra_metadata = {"key": "value"}
+        upload.timestamp = datetime(2025, 1, 1)
+        upload.source_ip = "127.0.0.1"
+        upload.user_agent = "test-agent"
+        upload.signature = "sig123"
+        upload.created_at = datetime(2025, 1, 1)
+        upload.updated_at = datetime(2025, 1, 2)
+
+        result = upload.to_dict()
+        assert result["upload_id"] == 1
+        assert result["uuid"] == "test-uuid-1234"
+        assert result["series"] == "test-series"
+        # Binary content should be base64-encoded
+        assert result["content"] == base64.b64encode(b"\x00\x01\x02\xff").decode("utf-8")
+        assert result["content_type"] == "application/octet-stream"
+        assert result["extra_metadata"] == {"key": "value"}
+
+    def test_to_dict_text_content(self):
+        """Text content should be returned as-is in to_dict output."""
+        upload = CMSUpload()
+        upload.upload_id = 2
+        upload.uuid = "test-uuid-5678"
+        upload.series = "docs"
+        upload.lookup_path = "readme.txt"
+        upload.content = None
+        upload.content_text = "Hello, world!"
+        upload.content_type = "text/plain"
+        upload.extra_metadata = {}
+        upload.timestamp = datetime(2025, 1, 1)
+        upload.source_ip = None
+        upload.user_agent = None
+        upload.signature = None
+        upload.created_at = datetime(2025, 1, 1)
+        upload.updated_at = datetime(2025, 1, 2)
+
+        result = upload.to_dict()
+        assert result["upload_id"] == 2
+        assert result["uuid"] == "test-uuid-5678"
+        # Text content should be raw string
+        assert result["content"] == "Hello, world!"
+        assert result["content_type"] == "text/plain"
+
+
+# ---- CMSConfig.is_admin --------------------------------------------------
+
+class TestCMSConfigIsAdmin:
+    """Tests for CMSConfig.is_admin()."""
+
+    def test_is_admin_true(self):
+        """is_admin returns True for matching admin address."""
+        mock_config = mock.MagicMock()
+        mock_config.admin_address = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+        with mock.patch.object(CMSConfig, "get_by_id", return_value=mock_config):
+            assert CMSConfig.is_admin("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY") is True
+
+    def test_is_admin_false_different_address(self):
+        """is_admin returns False for non-matching address."""
+        mock_config = mock.MagicMock()
+        mock_config.admin_address = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+        with mock.patch.object(CMSConfig, "get_by_id", return_value=mock_config):
+            assert CMSConfig.is_admin("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty") is False
+
+    def test_is_admin_false_no_config(self):
+        """is_admin returns False when no config exists."""
+        with mock.patch.object(CMSConfig, "get_by_id", return_value=None):
+            assert CMSConfig.is_admin("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY") is False
+
+
+# ---- Scribe.is_scribe ----------------------------------------------------
+
+class TestScribeIsScribe:
+    """Tests for Scribe.is_scribe()."""
+
+    def test_is_scribe_true(self):
+        """is_scribe returns True for existing scribe."""
+        mock_scribe = mock.MagicMock()
+        with mock.patch.object(Scribe, "get_by_id", return_value=mock_scribe):
+            assert Scribe.is_scribe("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty") is True
+
+    def test_is_scribe_false(self):
+        """is_scribe returns False for non-existing address."""
+        with mock.patch.object(Scribe, "get_by_id", return_value=None):
+            assert Scribe.is_scribe("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty") is False

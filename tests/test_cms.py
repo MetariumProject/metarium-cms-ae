@@ -111,14 +111,14 @@ class TestUpload:
             assert resp.status_code == 400
 
     def test_upload_oversized(self, client, mock_admin_user, admin_headers):
-        """Content > 1 MB => 400 (the route returns 400 for oversized)."""
+        """Content > 1 MB => 413 (Request Entity Too Large)."""
         big_data = base64.b64encode(b"x" * (1024 * 1024 + 1)).decode()
         with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True):
             resp = client.post("/api/cms/test-series/upload", headers=admin_headers, json={
                 "content": big_data,
                 "content_type": "application/octet-stream",
             })
-            assert resp.status_code == 400
+            assert resp.status_code == 413
 
     def test_upload_duplicate_lookup_path(self, client, mock_admin_user, admin_headers):
         """Duplicate lookup_path => 409."""

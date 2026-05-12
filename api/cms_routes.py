@@ -47,7 +47,7 @@ def upload(series):
 
         # Check size limit: 1MB
         if len(content_bytes) > 1 * 1024 * 1024:
-            return jsonify({"error": "Content exceeds maximum size of 1MB"}), 400
+            return jsonify({"error": "Content exceeds maximum size of 1MB"}), 413
 
     # If signature provided, validate informally (log, don't reject)
     if signature:
