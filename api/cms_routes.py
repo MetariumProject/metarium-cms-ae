@@ -29,13 +29,18 @@ def upload(series):
     extra_metadata = data.get('extra_metadata')
     signature = data.get('signature')
 
-    # Validate: need at least one content field
+    # Validate: need exactly one content field
     if not content_b64 and not content_text:
         return jsonify({"error": "Either 'content' (base64) or 'content_text' is required"}), 400
+
+    if content_b64 and content_text:
+        return jsonify({"error": "Provide either 'content' (base64) or 'content_text', not both"}), 400
 
     # Validate: content_type is required
     if not content_type:
         return jsonify({"error": "content_type is required"}), 400
+
+    MAX_CONTENT_BYTES = 1 * 1024 * 1024  # 1 MB
 
     # Decode binary content if provided
     content_bytes = None
@@ -46,8 +51,13 @@ def upload(series):
             return jsonify({"error": "Invalid base64 encoding in 'content' field"}), 400
 
         # Check size limit: 1MB
-        if len(content_bytes) > 1 * 1024 * 1024:
+        if len(content_bytes) > MAX_CONTENT_BYTES:
             return jsonify({"error": "Content exceeds maximum size of 1MB"}), 413
+
+    # Validate text content size
+    if content_text:
+        if len(content_text.encode('utf-8')) > MAX_CONTENT_BYTES:
+            return jsonify({"error": "Content text exceeds maximum size of 1MB"}), 413
 
     # If signature provided, validate informally (log, don't reject)
     if signature:
@@ -61,7 +71,7 @@ def upload(series):
         upload_entity = CMSUpload.create_upload(
             series=series,
             content_bytes=content_bytes,
-            content_text=content_text if not content_b64 else None,
+            content_text=content_text,
             content_type=content_type,
             extra_metadata=extra_metadata,
             lookup_path=lookup_path,
@@ -156,7 +166,7 @@ def list_uploads(series):
     uploads, next_cursor = CMSUpload.list_by_series(series, limit=limit, cursor=cursor)
 
     return jsonify({
-        "uploads": [u.to_dict() for u in uploads],
+        "uploads": [u.to_dict_meta() for u in uploads],
         "series": series,
         "next_cursor": next_cursor.decode('utf-8') if isinstance(next_cursor, bytes) else next_cursor,
     })
@@ -178,7 +188,7 @@ def delete_upload(series, upload_id):
     if upload is None:
         return jsonify({"error": f"Upload {upload_id} not found in series '{series}'"}), 404
 
-    upload.key.delete()
+    upload.delete_with_relationships()
 
     return jsonify({
         "message": "Upload deleted",

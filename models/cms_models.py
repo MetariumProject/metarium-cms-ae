@@ -20,6 +20,35 @@ class CMSConflictError(Exception):
         self.existing_upload_id = existing_upload_id
 
 
+class CMSSeriesCounter(ndb.Model):
+    """Per-series monotonic counter for upload ID allocation.
+
+    Key: ndb.Key('CMSSeries', series, 'CMSSeriesCounter', 'counter')
+    The counter is always incremented inside a transaction so that
+    concurrent uploads never receive the same upload_id, and IDs are
+    never reused even after deletion.
+    """
+
+    next_id = ndb.IntegerProperty(default=1)
+
+    @classmethod
+    def _key(cls, series):
+        return ndb.Key('CMSSeries', series, cls, 'counter')
+
+    @classmethod
+    @ndb.transactional()
+    def allocate_id(cls, series):
+        """Atomically allocate the next upload_id for *series*."""
+        key = cls._key(series)
+        counter = key.get()
+        if counter is None:
+            counter = cls(key=key, next_id=1)
+        allocated = counter.next_id
+        counter.next_id = allocated + 1
+        counter.put()
+        return allocated
+
+
 class CMSUpload(ndb.Model):
     """CMS Upload entity.
 
@@ -73,12 +102,11 @@ class CMSUpload(ndb.Model):
 
     @classmethod
     def _get_next_upload_id(cls, series):
-        """Get the next upload_id for a series using ancestor query."""
-        parent_key = cls._series_parent_key(series)
-        latest = cls.query(ancestor=parent_key).order(-cls.upload_id).get()
-        if latest:
-            return latest.upload_id + 1
-        return 1
+        """Allocate the next upload_id via a transactional per-series counter.
+
+        IDs are strictly monotonic and never reused, even after deletion.
+        """
+        return CMSSeriesCounter.allocate_id(series)
 
     @classmethod
     def create_upload(cls, series, content_bytes=None, content_text=None,
@@ -179,9 +207,13 @@ class CMSUpload(ndb.Model):
         results, next_cursor, more = query.fetch_page(limit, start_cursor=cursor)
         return results, (next_cursor.urlsafe() if next_cursor and more else None)
 
-    def to_dict(self):
-        """Convert entity to dictionary."""
-        result = {
+    def to_dict_meta(self):
+        """Convert entity to a metadata-only dictionary (no content payload).
+
+        Use this for list endpoints to avoid serializing potentially large
+        binary / text payloads.
+        """
+        return {
             'upload_id': self.upload_id,
             'uuid': self.uuid,
             'series': self.series,
@@ -196,6 +228,10 @@ class CMSUpload(ndb.Model):
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
         }
 
+    def to_dict(self):
+        """Convert entity to dictionary including content."""
+        result = self.to_dict_meta()
+
         # Content: base64 for binary, raw for text
         if self.content is not None:
             result['content'] = base64.b64encode(self.content).decode('utf-8')
@@ -205,3 +241,18 @@ class CMSUpload(ndb.Model):
             result['content'] = None
 
         return result
+
+    def delete_with_relationships(self):
+        """Delete this upload and cascade-delete all descendant relationships.
+
+        This prevents orphaned CMSRelationship entities from being
+        inherited by a future upload that might (in theory) receive the
+        same entity key.
+        """
+        from models.graph_models import CMSRelationship
+
+        # Fetch all relationship keys under this upload (active + removed)
+        rel_keys = CMSRelationship.query(ancestor=self.key).fetch(keys_only=True)
+        if rel_keys:
+            ndb.delete_multi(rel_keys)
+        self.key.delete()

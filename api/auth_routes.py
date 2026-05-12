@@ -69,8 +69,11 @@ def verify():
     # Verify signature
     try:
         keypair = Keypair(ss58_address=address)
-        keypair.verify(message_bytes, signature_bytes)
+        is_valid = keypair.verify(message_bytes, signature_bytes)
     except Exception:
+        return jsonify({"error": "Signature verification failed"}), 401
+
+    if not is_valid:
         return jsonify({"error": "Signature verification failed"}), 401
 
     # Decode message bytes to JSON and compare against stored challenge data

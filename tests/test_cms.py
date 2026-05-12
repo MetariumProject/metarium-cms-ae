@@ -27,13 +27,12 @@ def _mock_upload(upload_id=1, uuid_val="aaaa-bbbb-cccc-dddd", series="test-serie
     u.created_at = None
     u.updated_at = None
     u.timestamp = None
-    u.to_dict.return_value = {
+    meta = {
         "upload_id": upload_id,
         "uuid": uuid_val,
         "series": series,
         "lookup_path": lookup_path,
         "content_type": content_type,
-        "content": base64.b64encode(content).decode() if content else content_text,
         "extra_metadata": None,
         "source_ip": "127.0.0.1",
         "user_agent": "test",
@@ -41,6 +40,11 @@ def _mock_upload(upload_id=1, uuid_val="aaaa-bbbb-cccc-dddd", series="test-serie
         "created_at": None,
         "updated_at": None,
         "timestamp": None,
+    }
+    u.to_dict_meta.return_value = meta
+    u.to_dict.return_value = {
+        **meta,
+        "content": base64.b64encode(content).decode() if content else content_text,
     }
     u.key = mock.MagicMock()
     return u
@@ -119,6 +123,27 @@ class TestUpload:
                 "content_type": "application/octet-stream",
             })
             assert resp.status_code == 413
+
+    def test_upload_text_oversized(self, client, mock_admin_user, admin_headers):
+        """Text content > 1 MB => 413."""
+        big_text = "x" * (1024 * 1024 + 1)
+        with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True):
+            resp = client.post("/api/cms/test-series/upload", headers=admin_headers, json={
+                "content_text": big_text,
+                "content_type": "text/plain",
+            })
+            assert resp.status_code == 413
+
+    def test_upload_both_content_fields(self, client, mock_admin_user, admin_headers):
+        """Providing both content and content_text => 400."""
+        with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True):
+            resp = client.post("/api/cms/test-series/upload", headers=admin_headers, json={
+                "content": base64.b64encode(b"binary").decode(),
+                "content_text": "text",
+                "content_type": "application/octet-stream",
+            })
+            assert resp.status_code == 400
+            assert "not both" in resp.get_json()["error"]
 
     def test_upload_duplicate_lookup_path(self, client, mock_admin_user, admin_headers):
         """Duplicate lookup_path => 409."""
@@ -205,7 +230,7 @@ class TestDownload:
 class TestList:
 
     def test_list_with_cursor(self, client, mock_admin_user, admin_headers):
-        """List uploads => 200 with uploads array."""
+        """List uploads => 200 with uploads array (metadata only, no content)."""
         upload = _mock_upload()
         with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True), \
              mock.patch("api.cms_routes.CMSUpload.list_by_series", return_value=([upload], None)):
@@ -214,6 +239,9 @@ class TestList:
             data = resp.get_json()
             assert "uploads" in data
             assert data["series"] == "test-series"
+            # List endpoint returns metadata only, no content
+            assert "content" not in data["uploads"][0]
+            upload.to_dict_meta.assert_called_once()
 
     def test_list_invalid_limit(self, client, mock_admin_user, admin_headers):
         """Non-integer limit => 400."""
@@ -229,13 +257,14 @@ class TestList:
 class TestDelete:
 
     def test_delete_as_admin(self, client, mock_admin_user, admin_headers):
-        """Admin can delete => 200."""
+        """Admin can delete => 200, cascade-deletes relationships."""
         upload = _mock_upload()
         with mock.patch("api.cms_routes.CMSUpload.validate_series", return_value=True), \
              mock.patch("api.cms_routes.CMSConfig.is_admin", return_value=True), \
              mock.patch("api.cms_routes.CMSUpload.get_by_upload_id", return_value=upload):
             resp = client.delete("/api/cms/test-series/delete/1", headers=admin_headers)
             assert resp.status_code == 200
+            upload.delete_with_relationships.assert_called_once()
 
     def test_delete_as_scribe(self, client, mock_scribe_user, scribe_headers):
         """Scribe cannot delete => 403."""

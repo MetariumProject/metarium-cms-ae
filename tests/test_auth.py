@@ -84,7 +84,7 @@ class TestVerify:
              mock.patch("api.auth_routes.User.create_or_update", return_value=mock_user), \
              mock.patch("api.auth_routes.CMSConfig.is_admin", return_value=True), \
              mock.patch("api.auth_routes.Scribe.is_scribe", return_value=False):
-            MockKP.return_value.verify = mock.MagicMock()  # no exception = success
+            MockKP.return_value.verify.return_value = True
 
             resp = client.post("/api/auth/verify", json={
                 "address": ADMIN_ADDRESS,
@@ -98,8 +98,8 @@ class TestVerify:
             assert data["refresh_token"] == "ref456"
             assert data["role"] == "admin"
 
-    def test_verify_bad_signature(self, client):
-        """Invalid signature => 401."""
+    def test_verify_bad_signature_exception(self, client):
+        """Signature verification raises exception => 401."""
         challenge_data = {"address": ADMIN_ADDRESS, "timestamp": 0, "nonce": "n", "message": "m"}
         challenge_json_bytes = json.dumps(challenge_data, separators=(",", ":")).encode()
 
@@ -116,6 +116,26 @@ class TestVerify:
                 "signature": "ab" * 64,
             })
             assert resp.status_code == 401
+
+    def test_verify_bad_signature_returns_false(self, client):
+        """Signature verification returns False => 401."""
+        challenge_data = {"address": ADMIN_ADDRESS, "timestamp": 0, "nonce": "n", "message": "m"}
+        challenge_json_bytes = json.dumps(challenge_data, separators=(",", ":")).encode()
+
+        mock_challenge = mock.MagicMock()
+        mock_challenge.challenge_data = challenge_data
+
+        with mock.patch("api.auth_routes.Keypair") as MockKP, \
+             mock.patch("api.auth_routes.Challenge.get_challenge", return_value=mock_challenge):
+            MockKP.return_value.verify.return_value = False
+
+            resp = client.post("/api/auth/verify", json={
+                "address": ADMIN_ADDRESS,
+                "message": challenge_json_bytes.hex(),
+                "signature": "ab" * 64,
+            })
+            assert resp.status_code == 401
+            assert "Signature verification failed" in resp.get_json()["error"]
 
     def test_verify_no_challenge(self, client):
         """No stored challenge => 400."""

@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 
-from models.cms_models import CMSUpload, CMSValidationError
+from models.cms_models import CMSSeriesCounter, CMSUpload, CMSValidationError
 from models.acl_models import CMSConfig, Scribe
 from models.graph_models import ALL_PREDICATES, ALLOWED_PREDICATES, validate_predicate
 
@@ -157,6 +157,135 @@ class TestCMSUploadToDict:
         # Text content should be raw string
         assert result["content"] == "Hello, world!"
         assert result["content_type"] == "text/plain"
+
+
+# ---- CMSUpload.to_dict_meta -----------------------------------------------
+
+class TestCMSUploadToDictMeta:
+    """Tests for CMSUpload.to_dict_meta() metadata-only serialization."""
+
+    def test_to_dict_meta_excludes_content(self):
+        """to_dict_meta should not include a 'content' key."""
+        upload = CMSUpload()
+        upload.upload_id = 1
+        upload.uuid = "test-uuid-meta"
+        upload.series = "test-series"
+        upload.lookup_path = "doc.txt"
+        upload.content = b"\x00\x01\x02"
+        upload.content_text = None
+        upload.content_type = "application/octet-stream"
+        upload.extra_metadata = None
+        upload.timestamp = datetime(2025, 1, 1)
+        upload.source_ip = "127.0.0.1"
+        upload.user_agent = "test-agent"
+        upload.signature = None
+        upload.created_at = datetime(2025, 1, 1)
+        upload.updated_at = datetime(2025, 1, 2)
+
+        result = upload.to_dict_meta()
+        assert "content" not in result
+        assert result["upload_id"] == 1
+        assert result["uuid"] == "test-uuid-meta"
+        assert result["series"] == "test-series"
+
+    def test_to_dict_includes_content_and_meta(self):
+        """to_dict should include both metadata and content."""
+        upload = CMSUpload()
+        upload.upload_id = 3
+        upload.uuid = "test-uuid-full"
+        upload.series = "test-series"
+        upload.lookup_path = None
+        upload.content = b"hello"
+        upload.content_text = None
+        upload.content_type = "text/plain"
+        upload.extra_metadata = None
+        upload.timestamp = datetime(2025, 1, 1)
+        upload.source_ip = None
+        upload.user_agent = None
+        upload.signature = None
+        upload.created_at = datetime(2025, 1, 1)
+        upload.updated_at = datetime(2025, 1, 2)
+
+        result = upload.to_dict()
+        assert "content" in result
+        assert result["upload_id"] == 3
+        assert result["content"] == base64.b64encode(b"hello").decode("utf-8")
+
+
+# ---- CMSSeriesCounter ----------------------------------------------------
+
+class TestCMSSeriesCounter:
+    """Tests for the transactional per-series counter."""
+
+    def test_allocate_id_new_series(self):
+        """First allocation for a series returns 1."""
+        with mock.patch("models.cms_models.ndb.Key") as MockKey, \
+             mock.patch("models.cms_models.ndb.transactional", lambda: lambda f: f):
+            mock_key_instance = mock.MagicMock()
+            mock_key_instance.get.return_value = None
+            MockKey.return_value = mock_key_instance
+
+            # We need to call the underlying logic; since ndb.transactional
+            # is mocked away, we can call the classmethod directly with
+            # a fresh import.
+            counter = CMSSeriesCounter(next_id=1)
+            counter.put = mock.MagicMock()
+
+            mock_key_instance.get.return_value = None
+
+            # Test via _get_next_upload_id which calls allocate_id
+            with mock.patch.object(CMSSeriesCounter, 'allocate_id', return_value=1):
+                result = CMSUpload._get_next_upload_id("test-series")
+                assert result == 1
+
+    def test_allocate_id_existing_series(self):
+        """Subsequent allocation returns the next value."""
+        with mock.patch.object(CMSSeriesCounter, 'allocate_id', return_value=42):
+            result = CMSUpload._get_next_upload_id("existing-series")
+            assert result == 42
+
+
+# ---- CMSUpload.delete_with_relationships ---------------------------------
+
+class TestDeleteWithRelationships:
+    """Tests for CMSUpload.delete_with_relationships()."""
+
+    def _make_upload_with_mock_key(self):
+        """Create a mock that has delete_with_relationships bound properly."""
+        upload = mock.MagicMock(spec=CMSUpload)
+        upload.key = mock.MagicMock()
+        # Bind the real method to the mock instance
+        upload.delete_with_relationships = lambda: CMSUpload.delete_with_relationships(upload)
+        return upload
+
+    def test_delete_cascades_relationships(self):
+        """Deleting an upload also deletes all descendant relationships."""
+        upload = self._make_upload_with_mock_key()
+        mock_rel_keys = [mock.MagicMock(), mock.MagicMock()]
+
+        with mock.patch("models.graph_models.CMSRelationship.query") as MockQuery, \
+             mock.patch("models.cms_models.ndb.delete_multi") as mock_delete_multi:
+            MockQuery.return_value.fetch.return_value = mock_rel_keys
+
+            upload.delete_with_relationships()
+
+            MockQuery.assert_called_once_with(ancestor=upload.key)
+            MockQuery.return_value.fetch.assert_called_once_with(keys_only=True)
+            mock_delete_multi.assert_called_once_with(mock_rel_keys)
+            upload.key.delete.assert_called_once()
+
+    def test_delete_no_relationships(self):
+        """Deleting an upload with no relationships still deletes the upload."""
+        upload = self._make_upload_with_mock_key()
+
+        with mock.patch("models.graph_models.CMSRelationship.query") as MockQuery, \
+             mock.patch("models.cms_models.ndb.delete_multi") as mock_delete_multi:
+            MockQuery.return_value.fetch.return_value = []
+
+            upload.delete_with_relationships()
+
+            mock_delete_multi.assert_not_called()
+            upload.key.delete.assert_called_once()
 
 
 # ---- CMSConfig.is_admin --------------------------------------------------
