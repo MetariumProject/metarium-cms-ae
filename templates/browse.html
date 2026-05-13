@@ -528,8 +528,13 @@
             return;
         }
 
+        document.getElementById('connect-btn').style.display = 'none';
         if (accounts.length === 1) {
             await authenticateAccount(accounts[0]);
+            /* Restore button if authentication did not succeed */
+            if (!state.accessToken) {
+                document.getElementById('connect-btn').style.display = 'inline-block';
+            }
         } else {
             showAccountSelector(accounts);
         }
@@ -544,6 +549,7 @@
             opt.textContent = (acc.meta.name || 'Account ' + (i + 1)) + ' \u2014 ' + acc.address.slice(0, 8) + '...' + acc.address.slice(-4);
             selector.appendChild(opt);
         });
+        document.getElementById('connect-btn').style.display = 'none';
         document.getElementById('account-selector-group').style.display = 'block';
         document.getElementById('login-selected-btn').style.display = 'inline-block';
         window._pendingAccounts = accounts;
@@ -837,6 +843,7 @@
         document.getElementById('login-view').style.display = 'block';
         document.getElementById('browse-view').style.display = 'none';
         document.getElementById('content-modal').style.display = 'none';
+        document.getElementById('connect-btn').style.display = 'inline-block';
         document.getElementById('account-selector-group').style.display = 'none';
         document.getElementById('login-selected-btn').style.display = 'none';
     }
