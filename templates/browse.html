@@ -974,10 +974,16 @@
 
         /* Event listeners */
         document.getElementById('connect-btn').addEventListener('click', connectWallet);
-        document.getElementById('login-selected-btn').addEventListener('click', function() {
+        document.getElementById('login-selected-btn').addEventListener('click', async function() {
             var idx = document.getElementById('account-select').value;
             if (window._pendingAccounts && window._pendingAccounts[idx]) {
-                authenticateAccount(window._pendingAccounts[idx]);
+                await authenticateAccount(window._pendingAccounts[idx]);
+                /* Restore connect button if authentication did not succeed */
+                if (!state.accessToken) {
+                    document.getElementById('connect-btn').style.display = 'inline-block';
+                    document.getElementById('account-selector-group').style.display = 'none';
+                    document.getElementById('login-selected-btn').style.display = 'none';
+                }
             }
         });
         document.getElementById('logout-btn').addEventListener('click', async function() {
